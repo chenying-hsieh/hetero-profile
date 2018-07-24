@@ -5,6 +5,7 @@ LOCAL_PATH := $(call my-dir)
 
 TARGET_PLATFORM := PLATFORM_QCOM_SNAPDRAGON_835
 TARGET_SRC := \
+	libperf.c \
 	platform/sd835/sd835.c \
 	platform/sd835/sd835_cpu.c \
 	platform/sd835/sd835_gpu.c \
@@ -16,7 +17,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_MODULE    := hetero-perf
 LOCAL_SRC_FILES := \
     main.c platform.c $(TARGET_SRC)
-LOCAL_CFLAGS := -D$(TARGET_PLATFORM)
+LOCAL_CFLAGS := -D$(TARGET_PLATFORM) -lpthread
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/include/
 LOCAL_LDLIBS :=
 include $(BUILD_EXECUTABLE)

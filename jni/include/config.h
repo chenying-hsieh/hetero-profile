@@ -1,6 +1,8 @@
 #ifndef _H_CONFIG_
 #define _H_CONFIG_
 
+#include <pthread.h>
+#include <sched.h>
 #ifdef PLATFORM_QCOM_SNAPDRAGON_835
 #include "platform/sd835.h"
 #else
