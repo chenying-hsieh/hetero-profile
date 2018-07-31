@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <sched.h>
 
 #include <unistd.h>
@@ -55,6 +54,7 @@ enum profile_type {
 struct profile_cpu {
 
     int device_id; // cpu id 0 = first cpu , id 1 = second cpu
+    int core_id;
     int *profile_point; //  int profile_point_hetero[NR_PROFILES][MAX_CPU_PMU]
     //sean it is declared
     struct libperf_data *pd[MAX_CPU_PMU];// structre of libperf
@@ -69,6 +69,12 @@ struct profile_cpu {
     volatile int check_thread_id; // first must be 0
     volatile int check_thread_last; // zero & if NR_CPU_CORES => exit!!
 
+    //file
+    int fd_result[NR_CPU_CORES];
+    int fd_freq[NR_CPU_CORES];
+    char *file_perf_id[4];
+    char *file_freq_id[4];
+
     //set affinity
     void * cpu_set_aff[NR_CPU_CORES];
     
@@ -77,7 +83,8 @@ struct profile_cpu {
 
     int util;
     int freq;
-    unsigned long long pmu[NR_CPU_CORES][MAX_CPU_PMU];//result
+    unsigned long long pmu_cur[NR_CPU_CORES][MAX_CPU_PMU];//result
+    unsigned long long pmu_past[NR_CPU_CORES][MAX_CPU_PMU];//result
 };
 
 void sd835_profile_destroy(void *profile); /* generic destroy */

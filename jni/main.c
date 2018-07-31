@@ -1,18 +1,4 @@
-#define _GNU_SOURCE
-
-#include <inttypes.h>           /* for PRIu64 definition */
-#include <stdint.h>             /* for uint64_t and PRIu64 */
-#include <stdio.h>              /* for printf family */
-#include <stdlib.h>             /* for EXIT_SUCCESS definition */
 #include "libperf.h"            /* standard libperf include */
-#include <unistd.h>
-#include <pthread.h>
-
-#include <assert.h>
-#include <sched.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/time.h>
 #include "platform.h"
 
 
@@ -31,7 +17,7 @@ int main(int argc, char *argv[])
 	}
     //platform nr -> thread
     unsigned long long time_elapsed=0;
-	
+
     while (1) {
 		usleep(epoch - time_elapsed);
 
@@ -41,14 +27,8 @@ int main(int argc, char *argv[])
         platform_profile(&platform);
 		gettimeofday(&t2, NULL);
 
-                    //we don't need this//
-            //        /* wait for profling is done */
-            //		platform_profile_sync(&platform);
-
-                    /* TODO: use profiling results */
-            //		platform_profile_dump(&platform);
-
-		time_elapsed = (t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec;
+//        platform_profile_dump(&platform);
+        time_elapsed = (t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec;
 	}
 	return 0;
 }
