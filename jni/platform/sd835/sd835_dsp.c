@@ -22,3 +22,9 @@ void sd835_profile_dsp_dump(void *profile)
 }
 
 
+void sd835_profile_dsp_run(void *profile)
+{
+	/* TODO */
+}
+
+

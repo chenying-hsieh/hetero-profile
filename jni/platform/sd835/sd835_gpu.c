@@ -21,3 +21,7 @@ void sd835_profile_gpu_dump(void *profile)
 	/* TODO */
 }
 
+void sd835_profile_gpu_run(void *profile)
+{
+	/* TODO */
+}

@@ -1,33 +1,34 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/time.h>
+#include "libperf.h"            /* standard libperf include */
 #include "platform.h"
+
 
 static struct platform_hetero platform;
 
 int main(int argc, char *argv[])
 {
-	unsigned long long epoch = 100000; // micro-seconds
+	unsigned long long epoch = 100000; // micro-seconds -> 100ms
 	struct timeval t1, t2;
-
-	printf("Platform name: %s\n", PLATFORM_NAME);
+    printf("Platform name: %s\n", PLATFORM_NAME);
 	printf("Numer of profiling targets: %d\n", NR_PROFILES);
 
 	if (platform_init(&platform)) {
 		fprintf(stderr, "Platform init error.\n");
 		return -1;
 	}
-	while (1) {
-		unsigned long long time_elapsed;
+    //platform nr -> thread
+    unsigned long long time_elapsed=0;
+
+    while (1) {
+		usleep(epoch - time_elapsed);
 
 		gettimeofday(&t1, NULL);
 		fprintf(stderr, "start profiling %ld...\n", t1.tv_sec * 1000000 + t2.tv_usec);
-		platform_profile(&platform);
-		platform_profile_dump(&platform);
+		
+        platform_profile(&platform);
 		gettimeofday(&t2, NULL);
 
-		time_elapsed = (t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec;
-		usleep(epoch - time_elapsed);
+//        platform_profile_dump(&platform);
+        time_elapsed = (t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec;
 	}
 	return 0;
 }
