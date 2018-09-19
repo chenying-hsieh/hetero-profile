@@ -183,8 +183,9 @@ libperf_initialize(pid_t pid, int cpu)
   memcpy(attrs, default_attrs, sizeof(default_attrs));
   pd->attrs = attrs;
   snprintf(logname, sizeof(logname), "/sdcard/%d", pid);
-  pd->log = fopen(logname, "w+");
-
+  //pd->log = fopen(logname, "w+");
+  //extern struct _IO_FILE *stdout;
+  pd->log = stdout;
   assert(pd->log != NULL);
 
   for (i = 0; i < nr_counters; i++)
@@ -252,10 +253,10 @@ unsigned long long libperf_get_info(struct libperf_data *pd, void *id)
   int *fds = pd->fds;
   uint64_t count[3];                 /* potentially 3 values */
   int i = *(int *)id;
-  
+
   struct stats event_stats[nr_counters];
   struct stats walltime_nsecs_stats;
-  
+
   assert(fds[i] >= 0);
   result = read(fds[i], count, sizeof(uint64_t));
   assert(result == sizeof(uint64_t));

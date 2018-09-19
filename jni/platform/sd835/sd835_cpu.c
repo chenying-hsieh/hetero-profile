@@ -28,47 +28,47 @@ void *sd835_profile_cpu_init(void *platform)
     struct platform_hetero *pl_main = (struct platform_hetero *)platform;
     struct profile_cpu *cpu_prof;
     cpu_prof = (struct profile_cpu *)malloc(sizeof(struct profile_cpu));
-    
+
     memset(cpu_prof, 0, sizeof(struct profile_cpu));
     //get device ID
     cpu_prof->device_id = __sync_fetch_and_add(&(pl_main->check_dev_id),1);
     //get profile point
     cpu_prof->profile_point = profile_point_hetero[cpu_prof ->device_id];
-    
+
     //get main thread semaphore and this device semaphore
     cpu_prof->main_sem = &pl_main->main_sem;
     cpu_prof->dev_sem = &pl_main->dev_sem[cpu_prof->device_id];
-    
+
     //device sem init
     sem_init(cpu_prof->dev_sem,0,0);
-   
+
     //for check last profile
     cpu_prof->check_dev_last = &pl_main->check_dev_last;
-    
+
     //each core has each thread
     for(int i=0;i<NR_CPU_CORES;i++) // for each CPU_CORE , make each thread.
         pthread_create(&cpu_prof->thread_id[i],NULL,sd835_profile_cpu_thread_init,(void *)cpu_prof);
-    
+
     //create thread that control cpu device.
     pthread_create(&pl_main->thread_dv[cpu_prof->device_id],NULL,sd835_profile_cpu_control,(void *)cpu_prof);
-    
+
     return (void *)cpu_prof;
 }
-void *sd835_profile_cpu_control(void * profile) // for cpu control profile 
+void *sd835_profile_cpu_control(void * profile) // for cpu control profile
 {
     struct profile_cpu * cpu_prof = (struct profile_cpu *)profile;
     while(1)
     {
         //wait profile call...
         sem_wait(cpu_prof->dev_sem);
-        
+
         //call my dev threads
         for(int i=0; i<NR_CPU_CORES;i++)
             sem_post(&cpu_prof->thread_sem[i]);
-        
+
         //wait until threads are done...
         sem_wait(cpu_prof->dev_sem);
-        
+
         //Am I last dev?
         if(__sync_fetch_and_add(cpu_prof->check_dev_last,1) == NR_PROFILES-1)
         {
@@ -81,30 +81,30 @@ void *sd835_profile_cpu_control(void * profile) // for cpu control profile
 void *sd835_profile_cpu_thread_init(void * profile)
 {
     struct profile_cpu * cpu_prof = (struct profile_cpu *)profile;
-    
+
     // get thread ID (sequential number..) 0,1,2,3
     int th_id = (int)(__sync_fetch_and_add(&(cpu_prof->check_thread_id),1)); // thread ID
-    
+
     // get CPU core ID
     int core_id = (cpu_prof->device_id)*NR_CPU_CORES+th_id;// cluster ID
     cpu_prof->core_id = core_id;
     cpu_set_t mask;
-    
+
     //init thread semaphore
     sem_init(&cpu_prof->thread_sem[th_id],0,0);
 
     // set affinity (cpu_prof->cpu_id)*NR_CPU_CORES+i
     CPU_ZERO(&mask);
-    
+
     CPU_SET(core_id,&mask); //0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
     printf(" core id is %d \n",core_id);
     if(sched_setaffinity(0,sizeof(cpu_set_t),&mask)<0)
         printf(" core %d is error !!! \n",core_id);
-    
+
     cpu_prof->pd[th_id] = libperf_initialize(-1, -1);
     for(int i =0; i<MAX_CPU_PMU;i++)
         libperf_enablecounter(cpu_prof->pd[th_id], cpu_prof->profile_point[i]);
-    
+
     //result,freq file setting
     cpu_prof->file_perf_id[th_id] = malloc(sizeof(char)*50);
     cpu_prof->file_freq_id[th_id] = malloc(sizeof(char)*50);
@@ -113,29 +113,31 @@ void *sd835_profile_cpu_thread_init(void * profile)
     cpu_prof->fd_result[th_id] = open(cpu_prof->file_perf_id[th_id],O_WRONLY|O_CREAT|O_TRUNC);
     cpu_prof->fd_freq[th_id] = open(cpu_prof->file_freq_id[th_id],O_RDONLY);
 
-
-    while(1)
-    {
+    while(1) {
         // wait for dev call...
         sem_wait(&cpu_prof->thread_sem[th_id]);
-        
+
         // get information of profiling result...
         for(int i=0; i<MAX_CPU_PMU;i++)
             cpu_prof->pmu_cur[th_id][i] = libperf_get_info(cpu_prof->pd[th_id],&cpu_prof->profile_point[i]);
 
-        char * buf = malloc(sizeof(char)*100);
+        char log[512];
+	char *buf = log;
+	int ret = 0;
+
         // write profiling result
         for(int i=0; i<MAX_CPU_PMU;i++)
         {
-            sprintf(buf,"%llu ",cpu_prof->pmu_cur[th_id][i]-cpu_prof->pmu_past[th_id][i]);
-            write(cpu_prof->fd_result[th_id],buf,strlen(buf)+1);
-            fsync(cpu_prof->fd_result[th_id]); // write to the disk
+            ret += sprintf(buf + ret,"%llu ",cpu_prof->pmu_cur[th_id][i]-cpu_prof->pmu_past[th_id][i]);
+            //write(cpu_prof->fd_result[th_id],buf,strlen(buf)+1);
+            //fsync(cpu_prof->fd_result[th_id]); // write to the disk
             cpu_prof->pmu_past[th_id][i] = cpu_prof->pmu_cur[th_id][i];
         }
+	printf("c%2d %s\n", core_id, log);
         // write current freq
-        read(cpu_prof->fd_freq[th_id],buf,49);
-        write(cpu_prof->fd_result[th_id],buf,strlen(buf)+1);
-        lseek(cpu_prof->fd_freq[th_id],0,0);
+        //read(cpu_prof->fd_freq[th_id],buf,49);
+        //write(cpu_prof->fd_result[th_id],buf,strlen(buf)+1);
+        //lseek(cpu_prof->fd_freq[th_id],0,0);
         // Am I last thread?
         if(__sync_fetch_and_add(&(cpu_prof->check_thread_last),1)==NR_CPU_CORES-1)
         {
