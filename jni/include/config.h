@@ -9,4 +9,11 @@
 #error "Must define platform!"
 #endif
 
+//#define VERBOSE_PROFILE
+#ifdef VERBOSE_PROFILE
+#define PROF_LOG(fmt, args...) printf(fmt, ##args)
+#else
+#define PROF_LOG(fmt, args...) (void)0
+#endif
+
 #endif // _H_CONFIG_

@@ -1,5 +1,6 @@
 #include "libperf.h"            /* standard libperf include */
 #include "platform.h"
+#include "config.h"
 
 static struct platform_hetero platform;
 static volatile int stop = 0;
@@ -30,7 +31,7 @@ int main(int argc, char *argv[])
 		usleep(epoch - time_elapsed);
 
 		gettimeofday(&t1, NULL);
-		fprintf(stderr, "start profiling %ld...\n", t1.tv_sec * 1000000 + t2.tv_usec);
+		PROF_LOG("time=%ld...\n", t1.tv_sec * 1000000 + t2.tv_usec);
 
 		platform_profile(&platform);
 		gettimeofday(&t2, NULL);
@@ -38,6 +39,6 @@ int main(int argc, char *argv[])
 		//        platform_profile_dump(&platform);
 		time_elapsed = (t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec;
 	}
-	printf("gracefull exit!\n");
+	platform_profile_dump(&platform);
 	return 0;
 }

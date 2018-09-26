@@ -52,43 +52,46 @@ enum profile_type {
  */
 
 struct profile_cpu {
+	int device_id; // cpu id 0 = first cpu , id 1 = second cpu
+	int core_id;
+	int *profile_point; //  int profile_point_hetero[NR_PROFILES][MAX_CPU_PMU]
+	//sean it is declared
+	struct libperf_data *pd[MAX_CPU_PMU];// structre of libperf
 
-    int device_id; // cpu id 0 = first cpu , id 1 = second cpu
-    int core_id;
-    int *profile_point; //  int profile_point_hetero[NR_PROFILES][MAX_CPU_PMU]
-    //sean it is declared
-    struct libperf_data *pd[MAX_CPU_PMU];// structre of libperf
+	//semaphore
+	sem_t* main_sem; // our device semaphore ==> &profile->main_sem;
+	sem_t* dev_sem; // our device semaphore ==> &profile->dev_sem[device_id];
+	sem_t thread_sem[NR_CPU_CORES]; // each core has thread (to call profile..)
 
-    //semaphore
-    sem_t* main_sem; // our device semaphore ==> &profile->main_sem;
-    sem_t* dev_sem; // our device semaphore ==> &profile->dev_sem[device_id];
-    sem_t thread_sem[NR_CPU_CORES]; // each core has thread (to call profile..)
+	//check_Val & ID
+	volatile int* check_dev_last;// to know Am I last profile device? => then sig to main proc
+	volatile int check_thread_id; // first must be 0
+	volatile int check_thread_last; // zero & if NR_CPU_CORES => exit!!
 
-    //check_Val & ID
-    volatile int* check_dev_last;// to know Am I last profile device? => then sig to main proc
-    volatile int check_thread_id; // first must be 0
-    volatile int check_thread_last; // zero & if NR_CPU_CORES => exit!!
+	//file
+	int fd_result[NR_CPU_CORES];
+	int fd_freq[NR_CPU_CORES];
+	char *file_perf_id[4];
+	char *file_freq_id[4];
 
-    //file
-    int fd_result[NR_CPU_CORES];
-    int fd_freq[NR_CPU_CORES];
-    char *file_perf_id[4];
-    char *file_freq_id[4];
+	//set affinity
+	void * cpu_set_aff[NR_CPU_CORES];
 
-    //set affinity
-    void * cpu_set_aff[NR_CPU_CORES];
+	//thread
+	pthread_t thread_id[NR_CPU_CORES];
 
-    //thread
-    pthread_t thread_id[NR_CPU_CORES];
+	int freq;
+	unsigned long long pmu_cur[NR_CPU_CORES][MAX_CPU_PMU];//result
+	unsigned long long pmu_past[NR_CPU_CORES][MAX_CPU_PMU];//result
 
-    int freq;
-    unsigned long long pmu_cur[NR_CPU_CORES][MAX_CPU_PMU];//result
-    unsigned long long pmu_past[NR_CPU_CORES][MAX_CPU_PMU];//result
 
-    int prev_total;
-    int prev_idle;
-    int stat_fd;
-    int util;
+	int prev_total;
+	int prev_idle;
+	int stat_fd;
+	unsigned char util;
+	unsigned int util_total;
+
+	unsigned int count;
 };
 
 void sd835_profile_destroy(void *profile); /* generic destroy */
@@ -111,6 +114,8 @@ struct profile_gpu {
 	sem_t *main_sem;
 	unsigned char stop;
 	unsigned char util;
+	unsigned int util_total;
+	unsigned int count;
 
 	pthread_t thread;
 };

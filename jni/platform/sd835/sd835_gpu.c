@@ -6,6 +6,7 @@
 #include <fcntl.h>
 
 #include "platform.h"
+#include "config.h"
 
 #define GPU_LOAD_FILE "/sys/class/kgsl/kgsl-3d0/devfreq/gpu_load"
 
@@ -25,7 +26,8 @@ void *_mon_(void *arg)
 	while (!prof->stop) {
 		sem_wait(prof->dev_sem);
 		prof->util = get_gpu_util(prof->util_fd);
-printf("gpu-util=%d\n", prof->util);
+		prof->util_total += prof->util;
+		PROF_LOG("gpu-util=%d\n", prof->util);
 		sem_post(prof->main_sem);
 	}
 	return NULL;
@@ -45,6 +47,8 @@ void *sd835_profile_gpu_init(void *arg)
         prof->util_fd = open(GPU_LOAD_FILE, O_RDONLY);
 	prof->main_sem = &platform->main_sem;
 	prof->dev_sem = &platform->dev_sem[PROFILE_GPU];
+	prof->count = 0;
+	prof->util_total = 0;
 	sem_init(prof->dev_sem, 0, 0);
 
 	if (pthread_create(&prof->thread, NULL, _mon_, (void *)prof) ||
@@ -57,8 +61,9 @@ void *sd835_profile_gpu_init(void *arg)
 
 void sd835_profile_gpu_profile(void *profile)
 {
-    struct profile_gpu *prof = (struct profile_gpu *)profile;
-    sem_post(prof->dev_sem);
+	struct profile_gpu *prof = (struct profile_gpu *)profile;
+	prof->count++;
+	sem_post(prof->dev_sem);
 }
 
 void sd835_profile_gpu_update(void *profile, void *profile_new)
@@ -68,7 +73,8 @@ void sd835_profile_gpu_update(void *profile, void *profile_new)
 
 void sd835_profile_gpu_dump(void *profile)
 {
-	/* TODO */
+	struct profile_gpu *prof = (struct profile_gpu *)profile;
+	printf("avg-gpu-util=%.2f\n", prof->util_total / (float)prof->count);
 }
 
 void sd835_profile_gpu_run(void *profile)

@@ -49,7 +49,8 @@ sd835_update_cpu_util(struct profile_cpu *cpu_prof)
 	cpu_prof->prev_total = total;
 	cpu_prof->prev_idle = idle;
 	cpu_prof->util = 1000 * (diff_total - diff_idle) / (diff_total + 5) / 10;
-	printf("cpu-util=%d\n", cpu_prof->util);
+	cpu_prof->util_total += cpu_prof->util;
+	PROF_LOG("cpu-util=%d\n", cpu_prof->util);
 }
 
 void *sd835_profile_cpu_init(void *platform)
@@ -82,6 +83,8 @@ void *sd835_profile_cpu_init(void *platform)
     pthread_create(&pl_main->thread_dv[cpu_prof->device_id],NULL,sd835_profile_cpu_control,(void *)cpu_prof);
 
     cpu_prof->stat_fd = open("/proc/stat", O_RDONLY);
+    cpu_prof->util_total = 0;
+    cpu_prof->count = 0;
 
     return (void *)cpu_prof;
 }
@@ -180,8 +183,9 @@ void *sd835_profile_cpu_thread_init(void * profile)
 
 void sd835_profile_cpu_profile(void *profile)
 {
-    struct profile_cpu * cpu_prof = (struct profile_cpu *)profile;
-    sem_post(cpu_prof->dev_sem);
+	struct profile_cpu * cpu_prof = (struct profile_cpu *)profile;
+	cpu_prof->count++;
+	sem_post(cpu_prof->dev_sem);
 }
 
 void sd835_profile_cpu_sync(void *profile)
@@ -198,5 +202,7 @@ void sd835_profile_cpu_update(void *profile, void *profile_new) // signal and up
 
 void sd835_profile_cpu_dump(void *profile)
 {
+	struct profile_cpu * prof = (struct profile_cpu *)profile;
 
+	printf("avg-cpu-util=%.2f\n", prof->util_total / (float)prof->count);
 }
