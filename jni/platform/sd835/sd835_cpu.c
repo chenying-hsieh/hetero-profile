@@ -204,5 +204,7 @@ void sd835_profile_cpu_dump(void *profile)
 {
 	struct profile_cpu * prof = (struct profile_cpu *)profile;
 
+	if (!prof->count)
+		prof->count = 1;
 	printf("avg-cpu-util=%.2f\n", prof->util_total / (float)prof->count);
 }

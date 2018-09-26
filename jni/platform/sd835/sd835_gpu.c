@@ -76,6 +76,8 @@ void sd835_profile_gpu_update(void *profile, void *profile_new)
 void sd835_profile_gpu_dump(void *profile)
 {
 	struct profile_gpu *prof = (struct profile_gpu *)profile;
+	if (!prof->util_count)
+		prof->util_count = 1;
 	printf("avg-gpu-util=%.2f\n", prof->util_total / (float)prof->util_count);
 }
 
