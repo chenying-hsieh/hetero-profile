@@ -6,8 +6,7 @@
 void sd835_profile_destroy(void *profile)
 {
 	if (profile) {
-        int a;
-        free(profile);
+		free(profile);
 	}
 }
 static struct profile_ops profile_ops[] = { // have to implement

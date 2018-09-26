@@ -15,20 +15,20 @@ struct profile_ops {
 
 struct platform_hetero {
 	int nr_cpu;
-    
-    sem_t main_sem; // to control main thread
-    sem_t dev_sem[NR_PROFILES]; // to know devices thread jobs
-    
-    pthread_t thread_dv[NR_PROFILES]; // thread for each devices
+	int nr_gpu;
 
-    volatile int check_dev_last; // to check last dev profile..
-    volatile int check_dev_id; // increase 1 and it is a ID for dev.
+	sem_t main_sem; // to control main thread
 
-    void *profiles[NR_PROFILES];// information of each dev
+	sem_t dev_sem[NR_PROFILES]; // to know devices thread jobs
+	pthread_t thread_dv[NR_PROFILES]; // thread for each devices
 
-    struct profile_ops *profile_ops; // func of each dev
+	volatile int check_dev_last; // to check last dev profile..
+	volatile int check_dev_id; // increase 1 and it is a ID for dev.
 
-    pthread_t Device_thread_id[NR_PROFILES];
+	void *profiles[NR_PROFILES];// information of each dev
+	struct profile_ops *profile_ops; // func of each dev
+
+	pthread_t Device_thread_id[NR_PROFILES];
 };
 int platform_init(struct platform_hetero *platform);
 

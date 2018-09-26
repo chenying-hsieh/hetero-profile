@@ -38,8 +38,8 @@
 enum profile_type {
 	PROFILE_CPU_LITTLE = 0,
 	PROFILE_CPU_BIG,
-/*//  TODO
 	PROFILE_GPU,
+/*//  TODO
 	PROFILE_DSP,
 	PROFILE_MEM,
 	PROFILE_THERMAL,
@@ -77,14 +77,18 @@ struct profile_cpu {
 
     //set affinity
     void * cpu_set_aff[NR_CPU_CORES];
-    
-    //thread
-    pthread_t thread_id[NR_CPU_CORES];        
 
-    int util;
+    //thread
+    pthread_t thread_id[NR_CPU_CORES];
+
     int freq;
     unsigned long long pmu_cur[NR_CPU_CORES][MAX_CPU_PMU];//result
     unsigned long long pmu_past[NR_CPU_CORES][MAX_CPU_PMU];//result
+
+    int prev_total;
+    int prev_idle;
+    int stat_fd;
+    int util;
 };
 
 void sd835_profile_destroy(void *profile); /* generic destroy */
@@ -102,8 +106,13 @@ void sd835_profile_cpu_dump(void *profile);
  * GPU profiling interfaces
  */
 struct profile_gpu {
-	int util;
-	int freq;
+	int util_fd;
+	sem_t *dev_sem;
+	sem_t *main_sem;
+	unsigned char stop;
+	unsigned char util;
+
+	pthread_t thread;
 };
 void *sd835_profile_gpu_init();
 void sd835_profile_gpu_destroy(void *profile);

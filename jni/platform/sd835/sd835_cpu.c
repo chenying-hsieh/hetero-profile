@@ -22,6 +22,35 @@ int profile_point_hetero[NR_PROFILES][MAX_CPU_PMU] = {
     {  LIBPERF_COUNT_HW_CPU_CYCLES, LIBPERF_COUNT_HW_INSTRUCTIONS, LIBPERF_COUNT_HW_CACHE_REFERENCES ,LIBPERF_COUNT_HW_CACHE_MISSES }
 };
 
+static void
+sd835_update_cpu_util(struct profile_cpu *cpu_prof)
+{
+	int i;
+	char buf[256];
+	char *tmp;
+	int idle = 0;
+	int total = 0;
+	int diff_idle, diff_total;
+
+	pread(cpu_prof->stat_fd, buf, sizeof(buf), 0);
+
+	strtok_r(buf, " ", &tmp);
+	for (i = 0; i < 10; ++i) {
+		char *p;
+		int cycles;
+		p = strtok_r(NULL, " ", &tmp);
+		cycles = strtoul(p, NULL, 10);
+		total += cycles;
+		if (i == 3)
+			idle = cycles;
+	}
+	diff_total = total - cpu_prof->prev_total;
+	diff_idle = idle - cpu_prof->prev_idle;
+	cpu_prof->prev_total = total;
+	cpu_prof->prev_idle = idle;
+	cpu_prof->util = 1000 * (diff_total - diff_idle) / (diff_total + 5) / 10;
+	printf("cpu-util=%d\n", cpu_prof->util);
+}
 
 void *sd835_profile_cpu_init(void *platform)
 {
@@ -52,13 +81,15 @@ void *sd835_profile_cpu_init(void *platform)
     //create thread that control cpu device.
     pthread_create(&pl_main->thread_dv[cpu_prof->device_id],NULL,sd835_profile_cpu_control,(void *)cpu_prof);
 
+    cpu_prof->stat_fd = open("/proc/stat", O_RDONLY);
+
     return (void *)cpu_prof;
 }
+
 void *sd835_profile_cpu_control(void * profile) // for cpu control profile
 {
-    struct profile_cpu * cpu_prof = (struct profile_cpu *)profile;
-    while(1)
-    {
+    struct profile_cpu *cpu_prof = (struct profile_cpu *)profile;
+    while(1) {
         //wait profile call...
         sem_wait(cpu_prof->dev_sem);
 
@@ -70,10 +101,10 @@ void *sd835_profile_cpu_control(void * profile) // for cpu control profile
         sem_wait(cpu_prof->dev_sem);
 
         //Am I last dev?
-        if(__sync_fetch_and_add(cpu_prof->check_dev_last,1) == NR_PROFILES-1)
-        {
-            __sync_fetch_and_add(cpu_prof->check_dev_last,-NR_PROFILES);
-            sem_post(cpu_prof->main_sem);
+        if(__sync_fetch_and_add(cpu_prof->check_dev_last,1) == NR_PROFILES-1) {
+		__sync_fetch_and_add(cpu_prof->check_dev_last,-NR_PROFILES);
+		sd835_update_cpu_util(cpu_prof);
+		sem_post(cpu_prof->main_sem);
         }
     }
 }
@@ -133,14 +164,13 @@ void *sd835_profile_cpu_thread_init(void * profile)
             //fsync(cpu_prof->fd_result[th_id]); // write to the disk
             cpu_prof->pmu_past[th_id][i] = cpu_prof->pmu_cur[th_id][i];
         }
-	printf("c%2d %s\n", core_id, log);
+	//printf("c%d %s\n", core_id, log);
         // write current freq
         //read(cpu_prof->fd_freq[th_id],buf,49);
         //write(cpu_prof->fd_result[th_id],buf,strlen(buf)+1);
         //lseek(cpu_prof->fd_freq[th_id],0,0);
         // Am I last thread?
-        if(__sync_fetch_and_add(&(cpu_prof->check_thread_last),1)==NR_CPU_CORES-1)
-        {
+        if(__sync_fetch_and_add(&(cpu_prof->check_thread_last),1)==NR_CPU_CORES-1) {
             __sync_fetch_and_add(&(cpu_prof->check_thread_last),-NR_CPU_CORES);
             sem_post(cpu_prof->dev_sem);
         }
