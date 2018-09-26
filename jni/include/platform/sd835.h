@@ -115,7 +115,7 @@ struct profile_gpu {
 	unsigned char stop;
 	unsigned char util;
 	unsigned int util_total;
-	unsigned int count;
+	unsigned int util_count;
 
 	pthread_t thread;
 };

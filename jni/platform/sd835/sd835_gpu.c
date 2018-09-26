@@ -26,7 +26,10 @@ void *_mon_(void *arg)
 	while (!prof->stop) {
 		sem_wait(prof->dev_sem);
 		prof->util = get_gpu_util(prof->util_fd);
-		prof->util_total += prof->util;
+		if (prof->util) {
+			prof->util_total += prof->util;
+			prof->util_count++;
+		}
 		PROF_LOG("gpu-util=%d\n", prof->util);
 		sem_post(prof->main_sem);
 	}
@@ -47,7 +50,7 @@ void *sd835_profile_gpu_init(void *arg)
         prof->util_fd = open(GPU_LOAD_FILE, O_RDONLY);
 	prof->main_sem = &platform->main_sem;
 	prof->dev_sem = &platform->dev_sem[PROFILE_GPU];
-	prof->count = 0;
+	prof->util_count = 0;
 	prof->util_total = 0;
 	sem_init(prof->dev_sem, 0, 0);
 
@@ -62,7 +65,6 @@ void *sd835_profile_gpu_init(void *arg)
 void sd835_profile_gpu_profile(void *profile)
 {
 	struct profile_gpu *prof = (struct profile_gpu *)profile;
-	prof->count++;
 	sem_post(prof->dev_sem);
 }
 
@@ -74,7 +76,7 @@ void sd835_profile_gpu_update(void *profile, void *profile_new)
 void sd835_profile_gpu_dump(void *profile)
 {
 	struct profile_gpu *prof = (struct profile_gpu *)profile;
-	printf("avg-gpu-util=%.2f\n", prof->util_total / (float)prof->count);
+	printf("avg-gpu-util=%.2f\n", prof->util_total / (float)prof->util_count);
 }
 
 void sd835_profile_gpu_run(void *profile)
